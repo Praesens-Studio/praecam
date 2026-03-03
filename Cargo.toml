@@ -1,0 +1,9 @@
+[package]
+name = "praecam"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies.nokhwa]
+version = "0.10"
+# Use the native input backends, enable WGPU integration
+features = ["input-native"]
