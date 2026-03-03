@@ -9,7 +9,7 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn it_works() {
+	fn list() {
 		let devices = list_camera_devices();
 		match devices {
 			Ok(devs) => {
