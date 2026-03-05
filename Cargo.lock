@@ -241,6 +241,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "crossbeam-channel"
+version = "0.5.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "82b8f8f868b36967f9606790d1903570de9ceaf870a7bf9fbbd3016d636a2cb2"
+dependencies = [
+ "crossbeam-utils",
+]
+
+[[package]]
+name = "crossbeam-utils"
+version = "0.8.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
+
+[[package]]
 name = "dunce"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -339,6 +354,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
+name = "gphoto2"
+version = "3.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86aa5aa5f28a0915023d155f7ccc62ffc1f6ae1db888b281fae4e84228766442"
+dependencies = [
+ "crossbeam-channel",
+ "libc",
+ "libgphoto2_sys",
+ "log",
+]
+
+[[package]]
 name = "home"
 version = "0.5.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -396,6 +423,16 @@ name = "libc"
 version = "0.2.182"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6800badb6cb2082ffd7b6a67e6125bb39f18782f793520caee8cb8846be06112"
+
+[[package]]
+name = "libgphoto2_sys"
+version = "1.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "63434be819e4b8933a4df944b3033a1799259f1e37b219a4fb11f2fc01123a9e"
+dependencies = [
+ "bindgen",
+ "pkg-config",
+]
 
 [[package]]
 name = "libloading"
@@ -641,9 +678,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
 
 [[package]]
+name = "pkg-config"
+version = "0.3.32"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
+
+[[package]]
 name = "praecam"
 version = "0.1.0"
 dependencies = [
+ "gphoto2",
  "nokhwa",
 ]
 

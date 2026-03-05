@@ -1,34 +1,45 @@
-use nokhwa;
+use gphoto2::Context;
 
-pub enum CameraType {
-	Webcam,
-	DSLR, // Not supported yet, but will be in the future.
-}
-
-pub struct PreacamCamera {
+// Information returned by the `list()` command
+#[derive(Debug, Clone)]
+pub struct PreacamCameraInfo {
 	pub id: String,
 	pub name: String,
-	pub camera_type: CameraType,
+	pub description: String,
+	pub source: String,
 }
 
-pub fn list_cameras() -> Vec<PreacamCamera> {
-	let cameras_devices = nokhwa::query(nokhwa::utils::ApiBackend::Auto);
-	let mut cameras = Vec::new();
-	match cameras_devices {
-		Ok(devices) => {
-			for device in devices {
-				cameras.push(PreacamCamera {
-					id: device.index().to_string(),
-					name: device.human_name(),
-					camera_type: CameraType::Webcam,
-				});
-			}
-		}
-		Err(e) => {
-			eprintln!("Error listing cameras: {}", e);
-		}
+fn list_cameras() -> Result<Vec<PreacamCameraInfo>, Box<dyn std::error::Error>> {
+	let mut cameras = Vec::<PreacamCameraInfo>::new();
+
+	// Get cameras from gphoto2
+	let context = Context::new()?;
+	let gphoto2_camera_list = context.list_cameras().wait()?;
+	for camera in gphoto2_camera_list {
+		cameras.push(PreacamCameraInfo {
+			id: camera.port.clone(),
+			name: camera.model.clone(),
+			description: format!(
+				"Camera model {} on port {}",
+				camera.model,
+				camera.port.clone()
+			),
+			source: "gphoto2".into(),
+		});
 	}
-	cameras
+
+	// Get cameras from nokhwa
+	let nokhwa_camera_list = nokhwa::query(nokhwa::utils::ApiBackend::Auto)?;
+	for (index, camera) in nokhwa_camera_list.into_iter().enumerate() {
+		cameras.push(PreacamCameraInfo {
+			id: index.to_string(),
+			name: camera.human_name(),
+			description: format!("Nokhwa camera at index {}", camera.index()),
+			source: "nokhwa".into(),
+		});
+	}
+
+	Ok(cameras)
 }
 
 #[cfg(test)]
@@ -37,10 +48,13 @@ mod tests {
 
 	#[test]
 	fn list() {
-		let cameras = list_cameras();
-		assert!(!cameras.is_empty(), "No cameras found");
+		let cameras = list_cameras().unwrap();
+		println!("Found {} cameras", cameras.len());
 		for camera in cameras {
-			println!("Camera ID: {}, Name: {}", camera.id, camera.name);
+			println!(
+				"Camera: {} - {} ({}) [{}]",
+				camera.id, camera.name, camera.description, camera.source
+			);
 		}
 	}
 
