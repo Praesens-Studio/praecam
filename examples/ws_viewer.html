@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Praecam WS Viewer</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #111;
+      color: #eee;
+      display: grid;
+      place-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      width: min(1000px, 95vw);
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      image-rendering: pixelated;
+      border: 1px solid #333;
+      background: #000;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    input {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #333;
+      background: #1d1d1d;
+      color: #eee;
+    }
+    button {
+      padding: 8px 12px;
+      border: 1px solid #333;
+      background: #2a2a2a;
+      color: #eee;
+      cursor: pointer;
+    }
+    #status {
+      margin-bottom: 10px;
+      color: #b6b6b6;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="row">
+      <input id="wsUrl" value="ws://127.0.0.1:9001" />
+      <button id="connectBtn">Connect</button>
+    </div>
+    <div class="row">
+      <select id="cameraSelect" style="flex:1; padding:8px; border:1px solid #333; background:#1d1d1d; color:#eee;"></select>
+      <button id="refreshBtn">Refresh Cameras</button>
+      <button id="switchBtn">Switch Camera</button>
+    </div>
+    <div id="status">Disconnected</div>
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <script>
+    const defaultWsUrl = `ws://${window.location.hostname || '127.0.0.1'}:9001`;
+
+    const statusEl = document.getElementById('status');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const wsUrlInput = document.getElementById('wsUrl');
+    const connectBtn = document.getElementById('connectBtn');
+    const cameraSelect = document.getElementById('cameraSelect');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const switchBtn = document.getElementById('switchBtn');
+
+    wsUrlInput.value = defaultWsUrl;
+
+    let socket = null;
+
+    function setStatus(text) {
+      statusEl.textContent = text;
+    }
+
+    function connect() {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.close();
+      }
+
+      const url = wsUrlInput.value.trim();
+      socket = new WebSocket(url);
+      socket.binaryType = 'arraybuffer';
+
+      socket.onopen = () => {
+        setStatus(`Connected: ${url}`);
+        sendCommand({ cmd: 'list' });
+      };
+      socket.onclose = () => setStatus('Disconnected');
+      socket.onerror = () => setStatus('WebSocket error');
+
+      socket.onmessage = (event) => {
+        if (typeof event.data === 'string') {
+          handleServerText(event.data);
+          return;
+        }
+
+        const data = new Uint8Array(event.data);
+        if (data.length < 8) {
+          return;
+        }
+
+        const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+        const width = view.getUint32(0, true);
+        const height = view.getUint32(4, true);
+
+        const rgb = data.subarray(8);
+        if (rgb.length !== width * height * 3) {
+          return;
+        }
+
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width;
+          canvas.height = height;
+        }
+
+        const rgba = new Uint8ClampedArray(width * height * 4);
+        for (let src = 0, dst = 0; src < rgb.length; src += 3, dst += 4) {
+          rgba[dst] = rgb[src];
+          rgba[dst + 1] = rgb[src + 1];
+          rgba[dst + 2] = rgb[src + 2];
+          rgba[dst + 3] = 255;
+        }
+
+        const imageData = new ImageData(rgba, width, height);
+        ctx.putImageData(imageData, 0, 0);
+        setStatus(`Connected: ${url} | ${width}x${height}`);
+      };
+    }
+
+    function sendCommand(payload) {
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        return;
+      }
+      socket.send(JSON.stringify(payload));
+    }
+
+    function handleServerText(text) {
+      let message;
+      try {
+        message = JSON.parse(text);
+      } catch {
+        return;
+      }
+
+      if (message.type === 'camera_list' && Array.isArray(message.cameras)) {
+        cameraSelect.innerHTML = '';
+        const switchable = message.cameras.filter((camera) => {
+          return camera.source === 'nokhwa' && Number.isInteger(Number(camera.id));
+        });
+
+        switchable.forEach((camera) => {
+          const option = document.createElement('option');
+          option.value = camera.id;
+          option.textContent = `${camera.id} - ${camera.name} [${camera.source}]`;
+          cameraSelect.appendChild(option);
+        });
+
+        if (typeof message.active_camera_index === 'number') {
+          cameraSelect.value = String(message.active_camera_index);
+        }
+
+        setStatus(`Cameras loaded (${switchable.length} switchable)`);
+      } else if (message.type === 'camera_switched') {
+        setStatus(`Switched to camera index ${message.camera_index}`);
+      } else if (message.type === 'error') {
+		if (typeof message.active_camera_index === 'number') {
+		  cameraSelect.value = String(message.active_camera_index);
+		}
+        setStatus(`Error: ${message.message}`);
+      }
+    }
+
+    connectBtn.addEventListener('click', connect);
+    refreshBtn.addEventListener('click', () => sendCommand({ cmd: 'list' }));
+    switchBtn.addEventListener('click', () => {
+      const cameraIndex = Number(cameraSelect.value);
+      if (Number.isNaN(cameraIndex)) {
+        return;
+      }
+      sendCommand({ cmd: 'switch', camera_index: cameraIndex });
+    });
+    connect();
+  </script>
+</body>
+</html>
