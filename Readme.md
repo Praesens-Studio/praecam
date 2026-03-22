@@ -1,4 +1,4 @@
-# Praesens Camera Library
+# one23 Shot Studio Camera Library
 
 ## Streaming camera frames to WebSocket
 
