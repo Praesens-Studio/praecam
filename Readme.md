@@ -76,6 +76,17 @@ It will:
 - Start camera websocket streaming via `start_camera_websocket_stream(...)`
 - Host the HTML page at `http://127.0.0.1:8080`
 
+
+## Native dependencies required
+
+This project requires the following system libraries to be installed at runtime:
+
+- **Linux:** `libgphoto2` (install via your package manager, e.g. `sudo apt install libgphoto2-6` or `sudo dnf install libgphoto2`)
+- **macOS:** `libgphoto2` (install via Homebrew: `brew install libgphoto2`)
+- **Windows (MSYS2/MinGW):** `mingw-w64-x86_64-libgphoto2` (install via MSYS2: `pacman -S mingw-w64-x86_64-libgphoto2`)
+
+These must be present on the user's system to run binaries built from this crate.
+
 Optional environment variables:
 
 - `PRAECAM_CAMERA_INDEX` (default: `0`)
